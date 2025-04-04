@@ -1,22 +1,32 @@
-FROM debian:buster
+FROM alpine:3
 
-# TODO: Upgrade to the latest Debian and compile VLC from source with the
-# live555 plugin enabled: https://forum.videolan.org/viewtopic.php?t=157795
+# Install dependencies.
+RUN apk update && apk add \
+	lighttpd \
+    ffmpeg \
+    curl \
+    sed \
+	&& rm -rf /var/cache/apk/*
 
-# Install VLC.
-RUN apt update && apt install -y \
-	vlc \
-	bash \
-	ffmpeg \
-	&& apt clean && rm -rf /var/lib/apt/lists/*
+# Configure HTTP server.
+COPY mod_cgi.conf /etc/lighttpd/mod_cgi.conf
+RUN sed -i 's/#    "mod_alias",/    "mod_alias",/' \
+	/etc/lighttpd/lighttpd.conf
+RUN sed -i 's/#    "mod_setenv",/    "mod_setenv",/' \
+	/etc/lighttpd/lighttpd.conf
+RUN sed -i 's/#   include "mod_cgi.conf"/include "mod_cgi.conf"/' \
+	/etc/lighttpd/lighttpd.conf
+RUN mkdir /var/www/localhost/cgi-bin
 
-# Copy the stream script.
-WORKDIR /app
-COPY streamer.sh .
+# Copy scripts.
+WORKDIR /var/www/localhost/cgi-bin
+COPY index.html /var/www/localhost/htdocs/index.html
+COPY *.cgi .
 
-# Fix VLC to run as root.
-RUN sed -i 's/geteuid/getppid/' /usr/bin/vlc
+# Check every minute if lighttpd responds within 1 second and update container
+# health status accordingly.
+HEALTHCHECK --interval=1m --timeout=1s CMD curl -f http://localhost/ || exit 1
 
 # Start it up.
-EXPOSE 8888
-CMD '/app/streamer.sh'
+EXPOSE 80
+ENTRYPOINT [ "/usr/sbin/lighttpd", "-D", "-f", "/etc/lighttpd/lighttpd.conf" ]
