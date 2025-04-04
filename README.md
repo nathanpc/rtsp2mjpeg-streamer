@@ -14,7 +14,7 @@ services:
   3dprinter:
     image: 'ghcr.io/nathanpc/rtsp2mjpeg-streamer:main'
     ports:
-      - '8805:8888'
+      - '8805:80'
     environment:
       RTSP_URL: 'rtsp://test.stream.lan:554/test'
 ```
