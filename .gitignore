@@ -1,3 +1,6 @@
+# Docker
+docker-compose.yml
+
 # OS temporary and cache files.
 .DS_Store
 Thumbs.db
